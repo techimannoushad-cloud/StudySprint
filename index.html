@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StudySprint · Student Task Organiser</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+          },
+          colors: {
+            sprint: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Smooth custom checkbox transition */
+    .task-check:checked + label svg {
+      transform: scale(1);
+      opacity: 1;
+    }
+    .task-enter {
+      animation: slideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen antialiased flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
+
+  <!-- TOP NAVIGATION / BRAND -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="h-10 w-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white shadow-md shadow-indigo-200">
+          <i data-lucide="zap" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="font-extrabold text-lg sm:text-xl tracking-tight text-slate-900">StudySprint</h1>
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-200 uppercase tracking-wider">Practice Round</span>
+          </div>
+          <p class="text-xs text-slate-500 hidden sm:block">Stay on track with assignments & revision</p>
+        </div>
+      </div>
+
+      <!-- Quick Pending Counter Badge in Header -->
+      <div class="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 transition px-3 py-1.5 rounded-full text-xs font-semibold text-slate-700">
+        <span class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse"></span>
+        <span id="header-pending-count">0</span>
+        <span class="text-slate-500 font-normal">pending</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+
+    <!-- SPRINT PROGRESS CARD -->
+    <section class="bg-gradient-to-br from-indigo-600 via-indigo-700 to-violet-800 rounded-2xl p-5 sm:p-6 text-white shadow-xl shadow-indigo-100 relative overflow-hidden">
+      <!-- Decorative background blur -->
+      <div class="absolute -right-10 -bottom-10 w-44 h-44 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
+
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
+        <div>
+          <p class="text-xs font-bold uppercase tracking-wider text-indigo-200 mb-1">Today's Momentum</p>
+          <h2 id="progress-headline" class="text-xl sm:text-2xl font-extrabold">Ready to start studying?</h2>
+          <p id="progress-subtext" class="text-xs sm:text-sm text-indigo-100 mt-0.5">Keep track of your study deliverables.</p>
+        </div>
+        <div class="flex items-center gap-4 bg-white/10 backdrop-blur-md p-3 px-4 rounded-xl border border-white/15 shrink-0">
+          <div class="text-right">
+            <div id="progress-ratio" class="text-lg font-bold">0 / 0</div>
+            <div class="text-[11px] text-indigo-200">Tasks Completed</div>
+          </div>
+          <div class="w-12 h-12 rounded-full border-4 border-indigo-400/40 border-t-white flex items-center justify-center font-bold text-xs" id="progress-percent">
+            0%
+          </div>
+        </div>
+      </div>
+
+      <!-- Linear progress bar -->
+      <div class="w-full bg-black/20 h-2.5 rounded-full mt-4 overflow-hidden p-0.5">
+        <div id="progress-bar-fill" class="h-full bg-gradient-to-r from-emerald-400 to-teal-300 rounded-full transition-all duration-500 ease-out" style="width: 0%"></div>
+      </div>
+    </section>
+
+    <!-- ADD TASK FORM -->
+    <section class="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-200">
+      <h3 class="text-sm font-bold uppercase tracking-wider text-slate-500 mb-4 flex items-center gap-2">
+        <i data-lucide="plus-circle" class="w-4 h-4 text-indigo-600"></i> Add New Task
+      </h3>
+      <form id="task-form" class="space-y-4" onsubmit="event.preventDefault(); handleAddTask();">
+        <div class="grid grid-cols-1 sm:grid-cols-12 gap-3">
+          
+          <!-- Subject Select -->
+          <div class="sm:col-span-4">
+            <label for="task-subject" class="block text-xs font-semibold text-slate-600 mb-1.5">Subject</label>
+            <div class="relative">
+              <select id="task-subject" required class="w-full appearance-none bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition pr-8 cursor-pointer">
+                <option value="" disabled selected>Select subject...</option>
+                <option value="Mathematics">📐 Mathematics</option>
+                <option value="Science">🧪 Science / Physics</option>
+                <option value="Literature">📚 Literature & English</option>
+                <option value="History">🏛️ History</option>
+                <option value="Computer Science">💻 Computer Science</option>
+                <option value="Art & Design">🎨 Art & Design</option>
+                <option value="General Study">📝 General Study</option>
+              </select>
+              <i data-lucide="chevron-down" class="w-4 h-4 absolute right-3 top-3 text-slate-400 pointer-events-none"></i>
+            </div>
+          </div>
+
+          <!-- Task Name Input -->
+          <div class="sm:col-span-8">
+            <label for="task-name" class="block text-xs font-semibold text-slate-600 mb-1.5">Task Description</label>
+            <div class="flex gap-2">
+              <input
+                type="text"
+                id="task-name"
+                required
+                maxlength="120"
+                placeholder="e.g., Complete calculus practice sheet #4..."
+                class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition"
+              />
+              <button
+                type="submit"
+                class="bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] text-white px-5 py-2.5 rounded-xl font-semibold text-sm shadow-md shadow-indigo-100 flex items-center gap-1.5 transition shrink-0"
+              >
+                <i data-lucide="plus" class="w-4 h-4"></i>
+                <span class="hidden sm:inline">Add Task</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </form>
+    </section>
+
+    <!-- TASK CONTROLS & FILTER BAR -->
+    <section class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+      <!-- Filter Tabs: All, Pending, Completed -->
+      <div class="inline-flex p-1 bg-slate-200/70 rounded-xl max-w-fit" role="tablist">
+        <button
+          onclick="setFilter('all')"
+          id="filter-all"
+          class="filter-tab px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 bg-white text-indigo-700 shadow-xs"
+        >
+          All <span id="badge-all" class="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-100 text-slate-600">0</span>
+        </button>
+        <button
+          onclick="setFilter('pending')"
+          id="filter-pending"
+          class="filter-tab px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition flex items-center gap-1.5"
+        >
+          Pending <span id="badge-pending" class="text-[10px] px-1.5 py-0.2 rounded-full bg-amber-100 text-amber-700">0</span>
+        </button>
+        <button
+          onclick="setFilter('completed')"
+          id="filter-completed"
+          class="filter-tab px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition flex items-center gap-1.5"
+        >
+          Completed <span id="badge-completed" class="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-700">0</span>
+        </button>
+      </div>
+
+      <!-- Clear Completed Button -->
+      <div class="flex items-center gap-2">
+        <button
+          id="clear-completed-btn"
+          onclick="clearCompletedTasks()"
+          class="text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 border border-rose-200 px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+        >
+          <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+          Clear Completed
+        </button>
+      </div>
+    </section>
+
+    <!-- TASK LIST -->
+    <section>
+      <div id="task-list" class="space-y-2.5">
+        <!-- Dynamic Task Items inject here -->
+      </div>
+
+      <!-- Empty State -->
+      <div id="empty-state" class="hidden text-center py-12 px-4 bg-white rounded-2xl border border-dashed border-slate-300">
+        <div class="w-14 h-14 bg-indigo-50 text-indigo-500 rounded-full flex items-center justify-center mx-auto mb-3">
+          <i data-lucide="check-check" class="w-7 h-7"></i>
+        </div>
+        <h4 id="empty-title" class="text-base font-bold text-slate-800">No tasks found</h4>
+        <p id="empty-desc" class="text-xs text-slate-500 mt-1 max-w-xs mx-auto">Add your subjects and assignments above to start your sprint!</p>
+      </div>
+    </section>
+
+    <!-- KEYBOARD TIP & INFO FOOTER -->
+    <footer class="pt-6 pb-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-400 gap-2">
+      <div class="flex items-center gap-1.5">
+        <i data-lucide="info" class="w-3.5 h-3.5"></i>
+        <span>Tasks are automatically saved in local browser storage.</span>
+      </div>
+      <div>StudySprint · Student Task Organiser</div>
+    </footer>
+  </main>
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-16 opacity-0 transition-all duration-300 pointer-events-none bg-slate-900 text-white text-xs font-medium px-4 py-2.5 rounded-xl shadow-lg flex items-center gap-2">
+    <i data-lucide="check" class="w-4 h-4 text-emerald-400"></i>
+    <span id="toast-message">Action successful</span>
+  </div>
+
+  <!-- JAVASCRIPT LOGIC -->
+  <script>
+    // Subject theme badge mappings
+    const subjectStyles = {
+      'Mathematics': { bg: 'bg-blue-50 text-blue-700 border-blue-200', dot: 'bg-blue-500' },
+      'Science': { bg: 'bg-emerald-50 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500' },
+      'Literature': { bg: 'bg-purple-50 text-purple-700 border-purple-200', dot: 'bg-purple-500' },
+      'History': { bg: 'bg-amber-50 text-amber-700 border-amber-200', dot: 'bg-amber-500' },
+      'Computer Science': { bg: 'bg-cyan-50 text-cyan-700 border-cyan-200', dot: 'bg-cyan-500' },
+      'Art & Design': { bg: 'bg-pink-50 text-pink-700 border-pink-200', dot: 'bg-pink-500' },
+      'General Study': { bg: 'bg-slate-100 text-slate-700 border-slate-200', dot: 'bg-slate-500' },
+    };
+
+    // Initial mock data for first-time students
+    const DEFAULT_TASKS = [
+      { id: '1', name: 'Complete calculus practice sheet #4 (Integration)', subject: 'Mathematics', completed: false, createdAt: Date.now() - 3600000 },
+      { id: '2', name: 'Read Act 3 of Hamlet & write 1-page summary', subject: 'Literature', completed: false, createdAt: Date.now() - 7200000 },
+      { id: '3', name: 'Physics pendulum motion lab data analysis', subject: 'Science', completed: true, createdAt: Date.now() - 86400000 },
+      { id: '4', name: 'Review Cold War notes for Friday quiz', subject: 'History', completed: false, createdAt: Date.now() - 100000000 }
+    ];
+
+    // State
+    let tasks = [];
+    let currentFilter = 'all'; // 'all' | 'pending' | 'completed'
+
+    // Load from LocalStorage or fall back to default
+    function loadTasks() {
+      const saved = localStorage.getItem('studysprint_tasks');
+      if (saved) {
+        try {
+          tasks = JSON.parse(saved);
+        } catch (e) {
+          tasks = DEFAULT_TASKS;
+        }
+      } else {
+        tasks = DEFAULT_TASKS;
+        saveTasks();
+      }
+    }
+
+    function saveTasks() {
+      localStorage.setItem('studysprint_tasks', JSON.stringify(tasks));
+      render();
+    }
+
+    // Add Task
+    function handleAddTask() {
+      const subjectInput = document.getElementById('task-subject');
+      const nameInput = document.getElementById('task-name');
+
+      const subject = subjectInput.value.trim();
+      const name = nameInput.value.trim();
+
+      if (!subject || !name) return;
+
+      const newTask = {
+        id: 'task_' + Date.now(),
+        subject: subject,
+        name: name,
+        completed: false,
+        createdAt: Date.now()
+      };
+
+      tasks.unshift(newTask);
+      saveTasks();
+
+      // Reset form
+      nameInput.value = '';
+      nameInput.focus();
+      showToast('Task added to your sprint!');
+    }
+
+    // Toggle Complete / Undo Completion
+    function toggleTaskComplete(id) {
+      tasks = tasks.map(t => {
+        if (t.id === id) {
+          const updated = { ...t, completed: !t.completed };
+          if (updated.completed) {
+            showToast('Nice work! Task completed 🎉');
+          } else {
+            showToast('Task marked pending');
+          }
+          return updated;
+        }
+        return t;
+      });
+      saveTasks();
+    }
+
+    // Delete single task
+    function deleteTask(id) {
+      tasks = tasks.filter(t => t.id !== id);
+      saveTasks();
+      showToast('Task removed');
+    }
+
+    // Clear completed tasks
+    function clearCompletedTasks() {
+      const completedCount = tasks.filter(t => t.completed).length;
+      if (completedCount === 0) return;
+
+      if (confirm(`Remove ${completedCount} completed task${completedCount > 1 ? 's' : ''}?`)) {
+        tasks = tasks.filter(t => !t.completed);
+        saveTasks();
+        showToast(`Cleared ${completedCount} completed task${completedCount > 1 ? 's' : ''}`);
+      }
+    }
+
+    // Set filter
+    function setFilter(filter) {
+      currentFilter = filter;
+      
+      // Update tab styling
+      document.querySelectorAll('.filter-tab').forEach(btn => {
+        btn.classList.remove('bg-white', 'text-indigo-700', 'shadow-xs');
+        btn.classList.add('text-slate-600');
+      });
+
+      const activeBtn = document.getElementById(`filter-${filter}`);
+      if (activeBtn) {
+        activeBtn.classList.remove('text-slate-600');
+        activeBtn.classList.add('bg-white', 'text-indigo-700', 'shadow-xs');
+      }
+
+      renderTaskList();
+    }
+
+    // Show temporary toast feedback
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      const toastMsg = document.getElementById('toast-message');
+      toastMsg.innerText = msg;
+      toast.classList.remove('translate-y-16', 'opacity-0');
+      toast.classList.add('translate-y-0', 'opacity-100');
+
+      setTimeout(() => {
+        toast.classList.remove('translate-y-0', 'opacity-100');
+        toast.classList.add('translate-y-16', 'opacity-0');
+      }, 2300);
+    }
+
+    // Render Stats and Progress
+    function renderStats() {
+      const total = tasks.length;
+      const completed = tasks.filter(t => t.completed).length;
+      const pending = total - completed;
+      const percent = total === 0 ? 0 : Math.round((completed / total) * 100);
+
+      // Header and pill counts
+      document.getElementById('header-pending-count').innerText = pending;
+      document.getElementById('badge-all').innerText = total;
+      document.getElementById('badge-pending').innerText = pending;
+      document.getElementById('badge-completed').innerText = completed;
+
+      // Disable "Clear Completed" if none exist
+      const clearBtn = document.getElementById('clear-completed-btn');
+      clearBtn.disabled = completed === 0;
+
+      // Progress Widget
+      document.getElementById('progress-ratio').innerText = `${completed} / ${total}`;
+      document.getElementById('progress-percent').innerText = `${percent}%`;
+      document.getElementById('progress-bar-fill').style.width = `${percent}%`;
+
+      const headline = document.getElementById('progress-headline');
+      const subtext = document.getElementById('progress-subtext');
+
+      if (total === 0) {
+        headline.innerText = 'No tasks on your board';
+        subtext.innerText = 'Add your assignments above to kickstart your sprint!';
+      } else if (pending === 0) {
+        headline.innerText = 'All tasks completed! 🏆';
+        subtext.innerText = 'Awesome job crushing your study goals for today!';
+      } else if (completed === 0) {
+        headline.innerText = `${pending} task${pending > 1 ? 's' : ''} left to tackle`;
+        subtext.innerText = 'Start with the most important one and build momentum.';
+      } else {
+        headline.innerText = `${pending} task${pending > 1 ? 's' : ''} remaining`;
+        subtext.innerText = `You are ${percent}% through today's study list. Keep going!`;
+      }
+    }
+
+    // Render Task List HTML
+    function renderTaskList() {
+      const container = document.getElementById('task-list');
+      const emptyState = document.getElementById('empty-state');
+      const emptyTitle = document.getElementById('empty-title');
+      const emptyDesc = document.getElementById('empty-desc');
+
+      // Filter tasks
+      let filtered = tasks;
+      if (currentFilter === 'pending') {
+        filtered = tasks.filter(t => !t.completed);
+      } else if (currentFilter === 'completed') {
+        filtered = tasks.filter(t => t.completed);
+      }
+
+      if (filtered.length === 0) {
+        container.innerHTML = '';
+        emptyState.classList.remove('hidden');
+
+        if (currentFilter === 'completed') {
+          emptyTitle.innerText = 'No completed tasks yet';
+          emptyDesc.innerText = 'Finish pending schoolwork and check items off to see them here.';
+        } else if (currentFilter === 'pending') {
+          emptyTitle.innerText = 'Inbox zero! No pending tasks';
+          emptyDesc.innerText = 'You have completed everything or have not added tasks yet.';
+        } else {
+          emptyTitle.innerText = 'Your study list is empty';
+          emptyDesc.innerText = 'Add a subject and homework description above.';
+        }
+        return;
+      }
+
+      emptyState.classList.add('hidden');
+
+      container.innerHTML = filtered.map(task => {
+        const style = subjectStyles[task.subject] || { bg: 'bg-slate-100 text-slate-700 border-slate-200', dot: 'bg-slate-400' };
+
+        return `
+          <div class="task-enter group bg-white border ${task.completed ? 'border-slate-200/70 bg-slate-50/50' : 'border-slate-200'} rounded-2xl p-4 transition-all hover:shadow-md hover:border-indigo-100 flex items-start sm:items-center justify-between gap-3.5">
+            <!-- Checkbox and Task Details -->
+            <div class="flex items-start sm:items-center gap-3.5 flex-1 min-w-0">
+              
+              <!-- Checkbox Toggle -->
+              <button 
+                type="button"
+                onclick="toggleTaskComplete('${task.id}')"
+                class="mt-0.5 sm:mt-0 w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-colors shrink-0 ${
+                  task.completed 
+                    ? 'bg-emerald-500 border-emerald-500 text-white' 
+                    : 'border-slate-300 hover:border-indigo-500 bg-white'
+                }"
+                aria-label="${task.completed ? 'Mark task pending' : 'Mark task completed'}"
+              >
+                ${task.completed ? '<i data-lucide="check" class="w-4 h-4 stroke-[3]"></i>' : ''}
+              </button>
+
+              <!-- Task Content -->
+              <div class="min-w-0 flex-1">
+                <div class="flex flex-wrap items-center gap-2 mb-1">
+                  <!-- Subject badge -->
+                  <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-semibold border ${style.bg}">
+                    <span class="w-1.5 h-1.5 rounded-full ${style.dot}"></span>
+                    ${escapeHtml(task.subject)}
+                  </span>
+                  ${
+                    task.completed 
+                      ? '<span class="text-[10px] uppercase font-bold tracking-wider text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">Done</span>' 
+                      : ''
+                  }
+                </div>
+                <p class="text-sm font-medium break-words leading-relaxed transition ${
+                  task.completed ? 'text-slate-400 line-through' : 'text-slate-800'
+                }">
+                  ${escapeHtml(task.name)}
+                </p>
+              </div>
+            </div>
+
+            <!-- Actions (Undo / Delete) -->
+            <div class="flex items-center gap-1 shrink-0 opacity-90 sm:opacity-0 group-hover:opacity-100 transition">
+              <button
+                onclick="toggleTaskComplete('${task.id}')"
+                title="${task.completed ? 'Undo Completion' : 'Mark Complete'}"
+                class="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
+              >
+                <i data-lucide="${task.completed ? 'rotate-ccw' : 'check'}" class="w-4 h-4"></i>
+              </button>
+              <button
+                onclick="deleteTask('${task.id}')"
+                title="Delete Task"
+                class="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+              >
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // Re-initialize Lucide dynamic icons
+      if (window.lucide) {
+        lucide.createIcons();
+      }
+    }
+
+    // Helper to escape HTML tags
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.innerText = text;
+      return div.innerHTML;
+    }
+
+    // Global Render Trigger
+    function render() {
+      renderStats();
+      renderTaskList();
+    }
+
+    // Initial load
+    document.addEventListener('DOMContentLoaded', () => {
+      loadTasks();
+      if (window.lucide) {
+        lucide.createIcons();
+      }
+    });
+  </script>
+</body>
+</html>
